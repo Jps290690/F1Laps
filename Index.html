@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Meetings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        select {
+            margin-top: 10px;
+            padding: 10px;
+            /* Aumenta el espacio interno para hacerlo más alto */
+            background-color: #1f1f1f;
+            color: #f0f0f0;
+            border: 1px solid #444;
+            border-radius: 5px;
+            font-size: 16px;
+            /* Opcional: aumenta el tamaño del texto */
+            line-height: 1.5;
+            /* Asegura que el texto esté centrado verticalmente */
+        }
+
+        pre {
+            text-align: left;
+            background: #1f1f1f;
+            padding: 10px;
+            border: 1px solid #444;
+            display: inline-block;
+            color: #ccc;
+            max-width: 90%;
+            overflow-x: auto;
+        }
+
+        .pilot-list {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            /* Distribuye el espacio entre los elementos */
+            width: 100%;
+            padding: 5px 0;
+        }
+
+        .pilot-item {
+            display: flex;
+            align-items: center;
+            margin: 2px;
+            padding: 5px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            background-color: #2c2c2c;
+            border: 2px solid #555;
+            flex: 1 1 0;
+            /* Esto permite que crezcan y se encojan según sea necesario */
+            min-width: 0;
+            /* Permite que se contraigan más allá de su contenido */
+            overflow: hidden;
+            /* Evita que el contenido se desborde */
+            position: relative;
+            /* Para posicionamiento del botón de eliminar */
+        }
+
+        .pilot-item img {
+            width: 30px;
+            /* Reducir ligeramente el tamaño de la imagen */
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 5px;
+            flex-shrink: 0;
+            /* Evita que la imagen se encoja */
+        }
+
+        .pilot-item p {
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            /* Agrega puntos suspensivos si el texto es demasiado largo */
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .remove-btn {
+            cursor: pointer;
+            margin-left: 5px;
+            color: white;
+            background: red;
+            padding: 2px 5px;
+            border-radius: 50%;
+            font-weight: bold;
+            flex-shrink: 0;
+            /* Evita que el botón se encoja */
+            display: none;
+            /* Oculto por defecto */
+        }
+
+        .pilot-item:hover .remove-btn {
+            display: block;
+            /* Mostrar solo al hacer hover */
+        }
+
+        .pilot-item.dragging {
+            opacity: 0.5;
+        }
+
+        .scroll-container {
+            overflow-x: auto;
+            margin-bottom: 10px;
+        }
+
+        table {
+            font-family: "Lucida Console", "Courier New", monospace;
+            font-size: 15px;
+            /* más pequeño para caber mejor */
+            width: auto;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #1e1e1e;
+            color: #ddd;
+            white-space: nowrap;
+            /* evita que las celdas hagan wrap */
+        }
+
+        th,
+        td {
+            border: 1px solid #444;
+            padding: 4px;
+            /* menos espacio interior */
+        }
+
+        th {
+            background-color: #2b2b2b;
+        }
+
+        td img {
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
+        #lapDataTable {
+            transform-origin: top left;
+            display: inline-block;
+            /* para que pueda escalar bien */
+        }
+
+        h1,
+        h2,
+        label {
+            color: #f0f0f0;
+        }
+
+        #addAllDriversBtn {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            padding: 10px 18px;
+            background-color: #4a4a4a;
+            color: #ffffff;
+            border: 2px solid #00aaff;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 170, 255, 0.3);
+            letter-spacing: 0.5px;
+        }
+
+        #addAllDriversBtn:hover {
+            background-color: #5a5a5a;
+            border-color: #33bbff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 170, 255, 0.5);
+        }
+
+        #addAllDriversBtn:active {
+            transform: translateY(0);
+            background-color: #3a3a3a;
+            box-shadow: 0 1px 3px rgba(0, 170, 255, 0.3);
+        }
+
+        select,
+        button {
+            margin-top: 10px;
+            padding: 6px;
+            background-color: #1f1f1f;
+            color: #f0f0f0;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+
+        .size-3 {
+            width: 20px;
+            /* Aumenta el tamaño del LED */
+            height: 20px;
+        }
+
+        .rounded-full {
+            border-radius: 50%;
+            /* Hace que el LED sea un círculo */
+        }
+
+        .bg-gray-500 {
+            background-color: gray;
+            /* Color inicial (sin sesión seleccionada) */
+        }
+
+        .bg-red-500 {
+            background-color: red;
+            /* Color para sesión terminada */
+        }
+
+        .bg-green-500 {
+            background-color: green;
+            /* Color para sesión activa */
+        }
+
+        .animate-pulse {
+            animation: pulse 1.5s infinite;
+            /* Efecto de pulso */
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        label {
+            margin-right: 5px;
+            /* Espacio entre el label y el selector */
+            white-space: nowrap;
+            /* Evita que el texto del label haga salto de línea */
+        }
+
+        select,
+        button {
+            margin-right: 10px;
+            /* Espacio entre los selectores y el botón */
+            vertical-align: middle;
+            /* Alinea los selectores con los labels */
+        }
+
+        .size-3 {
+            width: 15px;
+            height: 15px;
+            margin-left: 5px;
+            /* Espacio entre el LED y el selector */
+        }
+
+        .rounded-full {
+            border-radius: 50%;
+        }
+
+        /* Estilos para los mejores tiempos */
+        .fastest-lap {
+            background-color: #9932CC;
+            /* Morado */
+            color: white !important;
+            /* Forzar color de texto blanco */
+            font-weight: bold !important;
+        }
+
+        .personal-best {
+            background-color: #BA55D3;
+            /* Lila */
+            color: white !important;
+            /* Forzar color de texto blanco */
+            font-weight: bold !important;
+        }
+
+        /* Estilo para el contenedor de selección */
+        #selectionArea {
+            transition: opacity 0.5s ease-in-out;
+            margin-bottom: 20px;
+        }
+
+        /* Estilo para el botón de mostrar/ocultar */
+        #toggleSelectionBtn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+
+</head>
+
+<body>
+    <button id="toggleSelectionBtn" onclick="toggleSelectionArea()">Hide Selection</button>
+
+    <!-- Status indicator - siempre visible -->
+    <div id="sessionStatus" class="size-3 rounded-full bg-gray-500"
+        style="position: fixed; top: 10px; right: 10px; z-index: 100;"></div>
+    
+    <div id="selectionArea">
+        <h1>Select an Event</h1>
+
+        <label for="yearSelect">Year:</label>
+        <select id="yearSelect" onchange="updateMeetings()">
+            <option value="">Loading...</option>
+        </select>
+        <label for="meetingSelect">Event:</label>
+        <select id="meetingSelect" onchange="updateSessions()">
+            <option value="">Select a year first</option>
+        </select>
+        <label for="sessionSelect">Session:</label>
+        <select id="sessionSelect" onchange="updateDrivers()">
+            <option value="">Select an event first</option>
+        </select>
+        <label for="driverSelect">Driver:</label>
+        <select id="driverSelect" onchange="addDriverToPool()">
+            <option value="">Select a session first</option>
+        </select>
+
+        <button id="addAllDriversBtn" onclick="addAllDriversToPool()">Add all drivers</button>
+
+        <h2>Selected Drivers</h2>
+        <div id="driverPool" class="pilot-list"></div>
+    </div>
+
+    <div class="scroll-container" id="scrollBottom">
+        <div id="loadingMessage" style="display: block; font-size: 20px; color: white; margin-top: 20px;">Loading...
+        </div>
+        <div id="lapDataWrapper" style="display: none;">
+            <!-- Aquí se inserta dinámicamente la tabla con displayLapData -->
+        </div>
+    </div>
+
+    <script>
+        let meetingsData = [];
+        let driverPool = [];
+        let driverAcronym = [];
+        let driverColor = [];
+        let isSessionActive = true; // Nueva variable global
+        let dragSrcEl = null;
+        let tableVisible = false;
+
+        // Función para mostrar/ocultar el área de selección
+        function toggleSelectionArea() {
+            const selectionArea = document.getElementById("selectionArea");
+            const btn = document.getElementById("toggleSelectionBtn");
+
+            if (selectionArea.style.display === "none") {
+                selectionArea.style.display = "block";
+                btn.textContent = "Hide Selection";
+            } else {
+                selectionArea.style.display = "none";
+                btn.textContent = "Show Selection";
+            }
+        }
+
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            this.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/html", this.innerHTML);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            return false;
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (dragSrcEl !== this) {
+                const driverPoolContainer = document.getElementById("driverPool");
+                const children = Array.from(driverPoolContainer.children);
+
+                const dragIndex = children.indexOf(dragSrcEl);
+                const dropIndex = children.indexOf(this);
+
+                if (dragIndex < dropIndex) {
+                    driverPoolContainer.insertBefore(dragSrcEl, this.nextSibling);
+                } else {
+                    driverPoolContainer.insertBefore(dragSrcEl, this);
+                }
+
+                // Reordenar driverPool basado en el nuevo orden del DOM
+                driverPool = Array.from(driverPoolContainer.children).map(item =>
+                    Number(item.getAttribute("data-driver-number"))
+                );
+
+                reorderTableByDriverPool();
+            }
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove("dragging");
+            // Restaurar color original
+            const color = this.getAttribute("data-color");
+            if (color) {
+                this.style.backgroundColor = color;
+            }
+        }
+
+        function updateDragAndDropListeners() {
+            const items = document.querySelectorAll(".pilot-item");
+            items.forEach(item => {
+                item.setAttribute("draggable", "true");
+                item.addEventListener("dragstart", handleDragStart);
+                item.addEventListener("dragover", handleDragOver);
+                item.addEventListener("drop", handleDrop);
+                item.addEventListener("dragend", handleDragEnd);
+            });
+        }
+
+        function reorderTableByDriverPool() {
+            const table = document.getElementById("lapDataTable");
+            const rows = Array.from(table.rows);
+            const header = rows.shift(); // Primera fila (header)
+
+            const poolOrder = Array.from(document.getElementById("driverPool").children)
+                .map(item => item.getAttribute("data-driver-number"));
+
+            // Índices de columnas actuales para cada driver
+            const currentIndices = header.cells.length > 1
+                ? poolOrder.map(num => {
+                    for (let i = 1; i < header.cells.length; i++) {
+                        if (header.cells[i].getAttribute("data-driver-number") === num) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                })
+                : [];
+
+            // Reordenar celdas en el header
+            const newHeaderCells = [header.cells[0].cloneNode(true)]; // primera celda fija
+            poolOrder.forEach((_, idx) => {
+                const colIdx = currentIndices[idx];
+                if (colIdx !== -1) {
+                    const cell = header.cells[colIdx].cloneNode(true);
+                    newHeaderCells.push(cell);
+                }
+            });
+
+            // Crear nuevo header
+            while (header.firstChild) header.removeChild(header.firstChild);
+            newHeaderCells.forEach(cell => header.appendChild(cell));
+
+            // Reordenar celdas en cada fila
+            rows.forEach(row => {
+                const newRowCells = [row.cells[0].cloneNode(true)];
+                poolOrder.forEach((_, idx) => {
+                    const colIdx = currentIndices[idx];
+                    if (colIdx !== -1 && row.cells[colIdx]) {
+                        const cell = row.cells[colIdx].cloneNode(true);
+                        newRowCells.push(cell);
+                    }
+                });
+
+                while (row.firstChild) row.removeChild(row.firstChild);
+                newRowCells.forEach(cell => row.appendChild(cell));
+            });
+        }
+
+        async function fetchMeetings() {
+            try {
+                const endpoint = 'https://api.openf1.org/v1/meetings';
+                const response = await fetch(endpoint);
+                meetingsData = await response.json();
+
+                populateYearSelect();
+            } catch (error) {
+                console.error('Error fetching meetings:', error);
+            }
+        }
+
+        function populateYearSelect() {
+            const yearSelect = document.getElementById('yearSelect');
+            yearSelect.innerHTML = '<option value="">Select a year</option>';
+
+            const years = [...new Set(meetingsData.map(meeting => new Date(meeting.date_start).getFullYear()))];
+            years.sort((a, b) => b - a);
+
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+
+            yearSelect.value = years[0];
+            updateMeetings();
+        }
+
+        function updateMeetings() {
+            const selectedYear = document.getElementById('yearSelect').value;
+            const meetingSelect = document.getElementById('meetingSelect');
+            meetingSelect.innerHTML = '<option value="">Select an event</option>';
+
+            if (!selectedYear) return;
+
+            const filteredMeetings = meetingsData.filter(meeting =>
+                new Date(meeting.date_start).getFullYear().toString() === selectedYear
+            );
+
+            filteredMeetings.forEach(meeting => {
+                const option = document.createElement('option');
+                option.value = meeting.meeting_key;
+                option.textContent = meeting.meeting_name;
+                meetingSelect.appendChild(option);
+            });
+
+            if (filteredMeetings.length > 0) {
+                meetingSelect.value = filteredMeetings[filteredMeetings.length - 1].meeting_key;
+                updateSessions();
+            }
+        }
+
+        async function updateSessions() {
+            const selectedMeeting = document.getElementById('meetingSelect').value;
+            const sessionSelect = document.getElementById('sessionSelect');
+            sessionSelect.innerHTML = '<option value="">Loading sessions...</option>';
+
+            if (!selectedMeeting) return;
+
+            try {
+                const endpoint = `https://api.openf1.org/v1/sessions?meeting_key=${selectedMeeting}`;
+                const response = await fetch(endpoint);
+                const sessions = await response.json();
+
+                sessionSelect.innerHTML = '<option value="">Select a session</option>';
+                sessions.forEach(session => {
+                    const option = document.createElement('option');
+                    option.value = session.session_key;
+                    option.textContent = session.session_name;
+                    option.setAttribute("data-date-end", session.date_end); // Guardar date_end
+                    sessionSelect.appendChild(option);
+                });
+
+                if (sessions.length > 0) {
+                    sessionSelect.value = sessions[sessions.length - 1].session_key;
+                    updateDrivers();
+                }
+
+            } catch (error) {
+                console.error('Error fetching sessions:', error);
+                sessionSelect.innerHTML = '<option value="">Error loading sessions</option>';
+            }
+        }
+
+        async function fetchDriverPositions(sessionKey) {
+                try {
+                    const endpoint = `https://api.openf1.org/v1/position?session_key=${sessionKey}`;
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+
+                    // Create a map of the latest position for each driver number
+                    const positionsMap = {};
+                    data.forEach(item => {
+                        // Update the map only if this is a newer position entry for this driver
+                        if (!positionsMap[item.driver_number] ||
+                            new Date(item.date) > new Date(positionsMap[item.driver_number].date)) {
+                            positionsMap[item.driver_number] = {
+                                position: item.position,
+                                date: item.date
+                            };
+                        }
+                    });
+
+                    // Convert to simple driver_number: position map
+                    const finalPositionsMap = {};
+                    Object.keys(positionsMap).forEach(driverNumber => {
+                        finalPositionsMap[driverNumber] = positionsMap[driverNumber].position;
+                    });
+
+                    console.log("Positions map:", finalPositionsMap); // For debugging
+                    return finalPositionsMap;
+                } catch (error) {
+                    console.error('Error fetching position data:', error);
+                    return {};
+                }
+            }
+
+        async function updateDrivers() {
+                const selectedSession = document.getElementById('sessionSelect').value;
+                const driverSelect = document.getElementById('driverSelect');
+                driverSelect.innerHTML = '<option value="">Loading drivers...</option>';
+
+                if (!selectedSession) return;
+
+                try {
+                    const endpoint = `https://api.openf1.org/v1/drivers?session_key=${selectedSession}`;
+                    const response = await fetch(endpoint);
+                    const drivers = await response.json();
+
+                    driverSelect.innerHTML = '<option value="">Select a driver</option>';
+                    drivers.forEach(driver => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify(driver);
+                        option.textContent = driver.full_name;
+                        driverSelect.appendChild(option);
+                        driverAcronym[driver.driver_number] = driver.name_acronym;
+                        driverColor[driver.driver_number] = driver.team_colour;
+                    });
+
+                    // Llamar a addAllDriversToPool asíncronamente y esperar su resultado
+                    await addAllDriversToPool();
+                } catch (error) {
+                    console.error('Error fetching drivers:', error);
+                    driverSelect.innerHTML = '<option value="">Error loading drivers</option>';
+                }
+            }
+
+        function addDriverToPool() {
+            const driverSelect = document.getElementById('driverSelect');
+            const driverData = JSON.parse(driverSelect.value);
+            if (!driverData || driverPool.includes(driverData.driver_number)) return;
+
+            driverPool.push(driverData.driver_number);
+            const driverPoolDiv = document.getElementById('driverPool');
+            const driverItem = document.createElement('div');
+            driverItem.className = 'pilot-item';
+            driverItem.style.color = `#${driverData.team_colour}`;
+            driverItem.style.border = "solid";
+            driverItem.setAttribute("data-driver-number", driverData.driver_number);
+            driverItem.setAttribute("data-color", '#${driverData.team_colour}');
+            driverItem.innerHTML = `<img src="${driverData.headshot_url}" alt="${driverData.name_acronym}" align="left"> <p align="center">${driverData.name_acronym}</p> <span class="remove-btn" onclick="removeDriver('${driverData.driver_number}', this)">X</span>`;
+            driverPoolDiv.appendChild(driverItem);
+            updateDragAndDropListeners();
+            fetchLapData();
+        }
+
+        async function addAllDriversToPool() {
+                const driverSelect = document.getElementById('driverSelect');
+                const selectedSession = document.getElementById('sessionSelect').value;
+                const sessionOption = document.querySelector(`#sessionSelect option[value="${selectedSession}"]`);
+
+                if (!sessionOption) return;
+
+                const sessionEndDate = new Date(sessionOption.getAttribute("data-date-end"));
+                const isFinished = sessionEndDate < new Date();
+
+                // Limpiar el pool actual
+                driverPool = [];
+                document.getElementById('driverPool').innerHTML = '';
+
+                let options = Array.from(driverSelect.options).slice(1); // Ignorar la primera opción
+                let driversData = options.map(opt => JSON.parse(opt.value));
+
+                // Si la sesión ha terminado, intentar ordenar por posición
+                if (isFinished) {
+                    try {
+                        console.log("Session finished, ordering by position");
+                        const positionsMap = await fetchDriverPositions(selectedSession);
+
+                        if (Object.keys(positionsMap).length > 0) {
+                            // Ordenar los datos de pilotos directamente
+                            driversData.sort((a, b) => {
+                                const posA = positionsMap[a.driver_number] || 999;
+                                const posB = positionsMap[b.driver_number] || 999;
+                                return posA - posB;
+                            });
+
+                            console.log("Drivers ordered by position:", driversData.map(d => d.name_acronym));
+                        } else {
+                            console.log("No classification data available");
+                        }
+                    } catch (error) {
+                        console.warn('Error ordering drivers by position:', error);
+                    }
+                }
+
+                // Añadir pilotos ordenados al pool
+                const driverPoolDiv = document.getElementById('driverPool');
+                driversData.forEach(driverData => {
+                    if (!driverPool.includes(driverData.driver_number)) {
+                        driverPool.push(driverData.driver_number);
+                        const driverItem = document.createElement('div');
+                        driverItem.className = 'pilot-item';
+                        driverItem.style.color = `#${driverData.team_colour}`;
+                        driverItem.style.border = "solid";
+                        driverItem.setAttribute("data-driver-number", driverData.driver_number);
+                        driverItem.setAttribute("data-color", '#${driverData.team_colour}');
+                        driverItem.innerHTML = `<img src="${driverData.headshot_url}" alt="${driverData.name_acronym}" align="left"> <p align="center">${driverData.name_acronym}</p> <span class="remove-btn" onclick="removeDriver('${driverData.driver_number}', this)">X</span>`;
+                        driverPoolDiv.appendChild(driverItem);
+                    }
+                });
+
+                updateDragAndDropListeners();
+                fetchLapData();
+            }
+
+        function removeDriver(driver, element) {
+            driver = Number(driver);
+            driverPool = driverPool.filter(d => d !== driver);
+            element.parentElement.remove();
+            fetchLapData();
+        }
+
+        // Función para convertir tiempo de vuelta (MM:SS.sss) a segundos para comparación
+        function timeToSeconds(time) {
+            if (time === "PIT" || time === "–" || !time) return Infinity;
+
+            const parts = time.split(':');
+            const minutes = parseInt(parts[0]);
+            const seconds = parseFloat(parts[1]);
+
+            return minutes * 60 + seconds;
+        }
+
+        async function fetchLapData() {
+            const selectedSession = document.getElementById('sessionSelect').value;
+            const sessionOption = document.querySelector(`#sessionSelect option[value="${selectedSession}"]`);
+            const sessionEndDate = new Date(sessionOption.getAttribute("data-date-end"));
+
+            if (!selectedSession || driverPool.length === 0) {
+                console.log("Please select a session and at least one driver.");
+                return;
+            }
+
+            let lapData = {};
+            let stintData = {};
+
+            try {
+                // Obtener datos de stints para todos los pilotos seleccionados
+                const stintEndpoint = `https://api.openf1.org/v1/stints?session_key=${selectedSession}`;
+                const stintResponse = await fetch(stintEndpoint);
+                const stints = await stintResponse.json();
+
+                // Mapear stints por driver y lap_number
+                stints.forEach(stint => {
+                    if (!stintData[stint.driver_number]) {
+                        stintData[stint.driver_number] = {};
+                    }
+
+                    let age = stint.tyre_age_at_start || 0;
+
+                    for (let lap = stint.lap_start; lap <= stint.lap_end; lap++) {
+                        stintData[stint.driver_number][lap] = {
+                            compound: stint.compound,
+                            age: age++
+                        };
+                    }
+                });
+
+                // Obtener datos de vueltas para cada piloto
+                for (const driverNumber of driverPool) {
+                    try {
+                        const endpoint = `https://api.openf1.org/v1/laps?session_key=${selectedSession}&driver_number=${driverNumber}`;
+                        const response = await fetch(endpoint);
+                        const data = await response.json();
+
+                        data.forEach(lap => {
+                            if (!lapData[lap.lap_number]) {
+                                lapData[lap.lap_number] = {};
+                            }
+                            const stintInfo = stintData[driverNumber]?.[lap.lap_number] || { compound: "Unknown", age: "?" };
+
+                            lapData[lap.lap_number][driverNumber] = {
+                                compound: stintInfo.compound,
+                                compound_age: stintInfo.age,
+                                lap_duration: lap.lap_duration ? formatLapTime(lap.lap_duration) : "PIT",
+                                lap_duration_seconds: lap.lap_duration || Infinity
+                            };
+                        });
+                    } catch (err) {
+                        console.warn(`Error fetching data for driver ${driverNumber}:`, err);
+                    }
+                }
+
+                // Mostrar los datos en la tabla
+                displayLapData(lapData);
+
+                // Verificar si la sesión está terminada después de obtener los datos
+                if (sessionEndDate < new Date()) {
+                    console.log("Session has ended. Stopping refresh.");
+                    isSessionActive = false; // Marcar como inactiva solo después de obtener los datos
+                }
+
+                // Hacer focus automáticamente en la tabla cuando ya está cargada
+                if (!tableVisible && Object.keys(lapData).length > 0) {
+                    document.getElementById("lapDataWrapper").scrollIntoView({ behavior: "smooth" });
+                    tableVisible = true;
+
+                    // Ocultar automáticamente el área de selección después de la primera carga
+                    if (Object.keys(lapData).length > 5) {
+                        setTimeout(() => {
+                            toggleSelectionArea();
+                        }, 1500);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching lap data:', error);
+            }
+        }
+
+        // Formatea lap_duration a MM:SS.sss
+        function formatLapTime(seconds) {
+            let minutes = Math.floor(seconds / 60);
+            let sec = (seconds % 60).toFixed(3);
+            return `${minutes}:${sec.padStart(6, "0")}`;
+        }
+
+        // Muestra los datos en formato de tabla
+        function displayLapData(lapData) {
+            // Encontrar el mejor tiempo global y los mejores tiempos por piloto
+            let bestGlobalLapTime = Infinity;
+            let bestDriverLapTimes = {};
+
+            // Inicializar mejores tiempos por piloto con Infinity
+            driverPool.forEach(driver => {
+                bestDriverLapTimes[driver] = Infinity;
+            });
+
+            // Encontrar los mejores tiempos
+            Object.keys(lapData).forEach(lapNum => {
+                Object.keys(lapData[lapNum]).forEach(driver => {
+                    const time = lapData[lapNum][driver].lap_duration_seconds;
+                    if (time && time < Infinity) {
+                        // Actualizar mejor tiempo global
+                        if (time < bestGlobalLapTime) {
+                            bestGlobalLapTime = time;
+                        }
+
+                        // Actualizar mejor tiempo del piloto
+                        if (time < bestDriverLapTimes[driver]) {
+                            bestDriverLapTimes[driver] = time;
+                        }
+                    }
+                });
+            });
+
+            let tableHTML = "<table id='lapDataTable'><tr><th><strong>Lap</strong></th>";
+
+            driverPool.forEach(driver => {
+                tableHTML += `<th align="center" data-driver-number="${driver}"><strong>${driverAcronym[driver]}</strong></th>`;
+            });
+            tableHTML += "</tr>";
+
+            Object.keys(lapData).sort((a, b) => b - a).forEach(lapNum => {
+                tableHTML += `<tr><td><strong>${lapNum}</strong></td>`;
+                driverPool.forEach(driver => {
+                    const info = lapData[lapNum][driver];
+                    if (info) {
+                        // Determinar si es mejor tiempo global o personal
+                        let classList = "";
+                        if (info.lap_duration_seconds === bestGlobalLapTime) {
+                            classList = "fastest-lap";
+                        } else if (info.lap_duration_seconds === bestDriverLapTimes[driver]) {
+                            classList = "personal-best";
+                        }
+
+                        tableHTML += `<td class="${classList}" style="color:#${driverColor[driver]}">${info.lap_duration}<br><small><img src="${getCompoundImage(info.compound)}" width="15" height="15" alt="${info.compound}"> (${info.compound_age})</small></td>`;
+                    } else {
+                        tableHTML += `<td>–</td>`;
+                    }
+                });
+                tableHTML += "</tr>";
+            });
+
+            tableHTML += "</table>";
+
+            // Insertar en la tabla real
+            document.getElementById("lapDataWrapper").innerHTML = tableHTML;
+
+            // En lugar de clonar toda la tabla, crear un div fantasma del mismo ancho
+            setTimeout(() => {
+                const table = document.getElementById("lapDataTable");
+                const containerWidth = document.getElementById("scrollBottom").offsetWidth;
+                const tableWidth = table.offsetWidth;
+
+                if (tableWidth > containerWidth) {
+                    const scale = containerWidth / tableWidth;
+                    table.style.transform = `scale(${scale})`;
+                } else {
+                    table.style.transform = `scale(1)`;
+                }
+            }, 100);
+
+            document.getElementById("loadingMessage").style.display = "none"; // Ocultar "Loading"
+            document.getElementById("lapDataWrapper").style.display = "block"; // Mostrar tabla
+        }
+
+        function getCompoundImage(compound) {
+            if (compound == "SOFT")
+                return "https://f1-dash.com/tires/soft.svg"
+            if (compound == "MEDIUM")
+                return "https://f1-dash.com/tires/medium.svg"
+            if (compound == "HARD")
+                return "https://f1-dash.com/tires/hard.svg"
+            if (compound == "WET")
+                return "https://f1-dash.com/tires/wet.svg"
+
+            return "https://f1-dash.com/tires/intermediate.svg"
+        }
+
+        function updateSessionStatus() {
+                const selectedSession = document.getElementById('sessionSelect').value;
+                const sessionOption = document.querySelector(`#sessionSelect option[value="${selectedSession}"]`);
+                const sessionStatus = document.getElementById("sessionStatus");
+
+                if (!selectedSession || !sessionOption) {
+                    // Si no hay sesión seleccionada, el LED se pone gris
+                    sessionStatus.className = "size-3 rounded-full bg-gray-500";
+                    return;
+                }
+
+                const sessionEndDate = new Date(sessionOption.getAttribute("data-date-end"));
+
+                if (sessionEndDate < new Date()) {
+                    // Sesión terminada
+                    sessionStatus.className = "size-3 rounded-full bg-red-500 animate-pulse";
+                    isSessionActive = false;
+                } else {
+                    // Sesión activa
+                    sessionStatus.className = "size-3 rounded-full bg-green-500 animate-pulse";
+                    isSessionActive = true;
+                }
+            }
+
+            // Llamar a esta función cada vez que se actualice la sesión
+            document.getElementById('sessionSelect').addEventListener('change', updateSessionStatus);
+
+            fetchMeetings();
+                // Modificar el intervalo para verificar si la sesión sigue activa
+                setInterval(() => {
+                    if (isSessionActive) {
+                        fetchLapData();
+                    }
+                    updateSessionStatus();
+                }, 10000);
+        </script>
+</body>
+
+</html>
